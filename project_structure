@@ -1,0 +1,24 @@
+project_root/
+├── src/
+│   ├── text_processing/
+│   │   ├── __init__.py
+│   │   └── text_preprocessor.py
+│   ├── keyword_matching/
+│   │   ├── __init__.py
+│   │   └── keyword_matcher.py
+│   └── product_naming/
+│       ├── __init__.py
+│       └── name_generator.py
+├── api/
+│   ├── __init__.py
+│   └── main.py
+├── config/
+│   └── config.py
+├── database/
+│   ├── __init__.py
+│   ├── models.py
+│   └── database.py
+├── tests/
+│   └── __init__.py
+├── requirements.txt
+└── README.md 

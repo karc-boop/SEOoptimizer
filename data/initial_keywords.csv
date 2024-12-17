@@ -1,0 +1,11 @@
+keyword,search_volume,competition_score,relevance_score
+modern,1000,0.8,0.9
+vintage,800,0.7,0.8
+luxury,1200,0.9,0.95
+casual,600,0.5,0.7
+elegant,900,0.8,0.85
+classic,1100,0.85,0.9
+minimalist,700,0.6,0.8
+premium,1000,0.85,0.9
+trendy,800,0.7,0.85
+stylish,900,0.75,0.85 
