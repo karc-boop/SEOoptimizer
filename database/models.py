@@ -19,13 +19,13 @@ class Keyword(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     keyword = Column(String, unique=True, nullable=False)
-    search_volume = Column(Integer)  # 搜索量
-    competition_score = Column(Float)  # 竞争度分数
-    relevance_score = Column(Float)  # 相关性分数
+    search_volume = Column(Integer)  
+    competition_score = Column(Float)  
+    relevance_score = Column(Float)  
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # 创建索引以加快查询
+    # create index for keyword and search volume
     __table_args__ = (
         Index('idx_keyword_search', keyword, search_volume.desc()),
     ) 

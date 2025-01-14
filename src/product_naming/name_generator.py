@@ -1,45 +1,44 @@
-from typing import List
-from google.cloud import aiplatform
-from config.config import settings
+from typing import List, Optional
+from .vertex_ai_client import VertexAIClient
+import logging
 
 class NameGenerator:
     def __init__(self):
-        # 初始化 Vertex AI
-        aiplatform.init(
-            project=settings.PROJECT_ID,
-            location=settings.LOCATION,
-        )
+        """Initialize name generator with Vertex AI client"""
+        self.ai_client = VertexAIClient()
         
-    def generate(self, keywords: List[str]) -> str:
-        """使用 Google Vertex AI 生成产品名称"""
-        # 构建提示
+    def generate(self, keywords: List[str]) -> Optional[str]:
+        """Generate product name based on keywords"""
         prompt = self._build_prompt(keywords)
         
-        # 获取预测客户端
-        model = aiplatform.TextGenerationModel.from_pretrained(settings.MODEL_NAME)
+        # Generate name using Vertex AI
+        generated_name = self.ai_client.generate_text(prompt)
         
-        # 生成响应
-        response = model.predict(
-            prompt,
-            temperature=settings.TEMPERATURE,
-            max_output_tokens=settings.MAX_OUTPUT_TOKENS,
-        )
-        
-        # 处理并返回生成的名称
-        return self._process_response(response)
+        if generated_name:
+            return self._process_response(generated_name)
+        return None
     
     def _build_prompt(self, keywords: List[str]) -> str:
-        """构建提示模板"""
+        """Build prompt for the AI model"""
         keywords_str = ", ".join(keywords)
         return (
-            f"Generate a catchy and marketable product name based on these keywords: {keywords_str}.\n"
-            "The name should be concise, memorable, and appealing to customers.\n"
+            "Generate a catchy and marketable product name based on these keywords:\n"
+            f"Keywords: {keywords_str}\n\n"
+            "Requirements:\n"
+            "1. Name should be concise (1-3 words)\n"
+            "2. Easy to remember and pronounce\n"
+            "3. Reflect the product's key features\n"
+            "4. Suitable for marketing\n\n"
             "Product name:"
         )
     
-    def _process_response(self, response) -> str:
-        """处理模型响应"""
-        # 清理和格式化响应
-        generated_name = response.text.strip()
-        # 可以添加额外的处理逻辑
-        return generated_name 
+    def _process_response(self, response: str) -> str:
+        """Process and clean the generated response"""
+        # Remove any quotes or extra whitespace
+        name = response.strip().strip('"\'')
+        
+        # Take only the first line if multiple lines are returned
+        name = name.split('\n')[0]
+        
+        # Ensure proper capitalization
+        return name.title() 

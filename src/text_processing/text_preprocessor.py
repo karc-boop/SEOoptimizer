@@ -1,68 +1,116 @@
 import re
-from typing import List
+from typing import List, Dict
 import nltk
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+from nltk.tag import pos_tag
 
 class TextPreprocessor:
     def __init__(self):
-        # 下载必要的NLTK数据
+        # Download necessary NLTK data
         nltk.download('punkt')
         nltk.download('stopwords')
         nltk.download('wordnet')
         nltk.download('averaged_perceptron_tagger')
+        nltk.download('omw-1.4')
         
         self.lemmatizer = WordNetLemmatizer()
         self.stop_words = set(stopwords.words('english'))
         
-    def process(self, text: str) -> str:
-        """
-        预处理文本
-        1. 转换为小写
-        2. 移除特殊字符
-        3. 分词
-        4. 移除停用词
-        5. 词形还原
-        """
-        # 转换为小写
+    def clean_text(self, text: str) -> str:
+        """Basic text cleaning"""
+        # Convert to lowercase
         text = text.lower()
         
-        # 移除特殊字符
+        # Remove special characters but keep spaces between words
         text = re.sub(r'[^\w\s]', ' ', text)
         
-        # 分词
-        tokens = word_tokenize(text)
+        # Remove extra whitespace
+        text = ' '.join(text.split())
         
-        # 移除停用词和词形还原
-        processed_tokens = [
-            self.lemmatizer.lemmatize(token)
-            for token in tokens
-            if token not in self.stop_words and len(token) > 2
-        ]
-        
-        # 重新组合为文本
-        return ' '.join(processed_tokens)
+        return text
     
-    def extract_key_phrases(self, text: str) -> List[str]:
-        """提取关键短语"""
-        # 分词和词性标注
-        tokens = word_tokenize(text)
-        tagged = nltk.pos_tag(tokens)
+    def get_wordnet_pos(self, tag: str) -> str:
+        """Map POS tag to WordNet POS tag"""
+        tag_dict = {
+            'J': wordnet.ADJ,
+            'N': wordnet.NOUN,
+            'V': wordnet.VERB,
+            'R': wordnet.ADV
+        }
+        return tag_dict.get(tag[0], wordnet.NOUN)
+    
+    def process(self, text: str) -> Dict[str, any]:
+        """
+        Process text and return detailed analysis
+        Returns:
+            Dict containing:
+            - cleaned_text: basic cleaned text
+            - tokens: list of processed tokens
+            - key_phrases: extracted key phrases
+            - sentences: list of sentences
+        """
+        # Basic cleaning
+        cleaned_text = self.clean_text(text)
         
-        # 提取名词短语
-        phrases = []
+        # Tokenize into sentences
+        sentences = sent_tokenize(cleaned_text)
+        
+        # Process tokens
+        tokens = word_tokenize(cleaned_text)
+        
+        # POS tagging
+        tagged_tokens = pos_tag(tokens)
+        
+        # Process tokens with POS info
+        processed_tokens = []
+        for token, tag in tagged_tokens:
+            if (token not in self.stop_words and 
+                len(token) > 2 and 
+                token.isalnum()):
+                # Lemmatize with POS tag
+                lemma = self.lemmatizer.lemmatize(
+                    token, 
+                    self.get_wordnet_pos(tag)
+                )
+                processed_tokens.append(lemma)
+        
+        # Extract key phrases
+        key_phrases = self.extract_key_phrases(tagged_tokens)
+        
+        return {
+            'cleaned_text': cleaned_text,
+            'tokens': processed_tokens,
+            'key_phrases': key_phrases,
+            'sentences': sentences
+        }
+    
+    def extract_key_phrases(self, tagged_tokens: List[tuple]) -> List[str]:
+        """Extract meaningful phrases from tagged tokens"""
+        key_phrases = []
         current_phrase = []
         
-        for word, tag in tagged:
-            if tag.startswith(('NN', 'JJ')):  # 名词和形容词
-                current_phrase.append(word)
+        for token, tag in tagged_tokens:
+            # Consider nouns, adjectives, and verbs
+            if tag.startswith(('NN', 'JJ', 'VB')):
+                current_phrase.append(token)
+                # Add sub-phrases of length 2 or more
+                if len(current_phrase) >= 2:
+                    key_phrases.append(' '.join(current_phrase[-2:]))
             else:
-                if current_phrase:
-                    phrases.append(' '.join(current_phrase))
+                if len(current_phrase) > 0:
+                    phrase = ' '.join(current_phrase)
+                    if len(phrase.split()) > 1:
+                        key_phrases.append(phrase)
                     current_phrase = []
         
+        # Add the last phrase if exists
         if current_phrase:
-            phrases.append(' '.join(current_phrase))
+            phrase = ' '.join(current_phrase)
+            if len(phrase.split()) > 1:
+                key_phrases.append(phrase)
         
-        return phrases 
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(key_phrases))
